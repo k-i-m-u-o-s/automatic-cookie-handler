@@ -1,5 +1,10 @@
-import { detectOneTrust } from "./detectors/onetrustDetector";
-import { findRejectButton, clickRejectButton } from "./actions/rejectHandler";
+import { detectCMP } from "../core/cmpDetector";
+// import { detectOneTrust } from "./detectors/onetrustDetector";
+import { RULE_REGISTRY } from "../core/ruleRegistry";
+import {
+  findRejectButton,
+  clickRejectButton,
+} from "../core/actions/rejectHandler";
 
 console.log("Cookie Consent Extension Loaded");
 
@@ -37,21 +42,33 @@ function runConsentAutomation() {
     return;
   }
 
-  console.log("Scanning website for OneTrust CMP...");
+  console.log("Scanning website for supported CMPs...");
 
-  // Step 1: Detect OneTrust
-  const isOneTrust = detectOneTrust();
-
-  if (!isOneTrust) {
-    console.log("No OneTrust CMP detected");
+  // Step 1: Detect CMP
+  const detectedCMP = detectCMP();
+  //no CMP found
+  if (!detectedCMP) {
+    console.log("No supported CMP detected");
 
     return;
   }
 
-  console.log("OneTrust CMP detected");
+  console.log(`Detected CMP: ${detectedCMP}`);
 
-  // Step 2: Find reject button
-  const rejectButton = findRejectButton();
+  // Step 2: Load CMP rules
+  const cmpRules = RULE_REGISTRY[detectedCMP];
+
+  //No rules found
+  if (!cmpRules) {
+    console.log("No rules found for detected CMP");
+
+    return;
+  }
+  // Step 3: Extract reject selectors
+  const rejectSelectors = cmpRules.rejectSelectors;
+
+  // Step 4: Find reject button
+  const rejectButton = findRejectButton(rejectSelectors);
 
   if (!rejectButton) {
     console.log("Reject button not found");
@@ -61,7 +78,7 @@ function runConsentAutomation() {
 
   console.log("Reject button located");
 
-  // Step 3: Click reject button
+  // Step 5: Click reject button
   const clickSuccess = clickRejectButton(rejectButton);
 
   if (clickSuccess) {
